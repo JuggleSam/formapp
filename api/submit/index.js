@@ -14,16 +14,6 @@ function getConfig() {
 }
 
 module.exports = async function (context, req) {
-
-    // SAFE diagnostics (inside function!)
-    const missing = ["SQL_USER", "SQL_PASSWORD", "SQL_SERVER", "SQL_DATABASE"]
-        .filter(k => !process.env[k]);
-
-    if (missing.length) {
-        context.res = { status: 500, body: "Missing app settings: " + missing.join(", ") };
-        return;
-    }
-
     try {
         const body = req.body || {};
         const name = (body.name || "").trim();
@@ -35,7 +25,10 @@ module.exports = async function (context, req) {
             return;
         }
 
-        if (!pool) pool = await sql.connect(getConfig());
+        // Create or reuse SQL connection
+        if (!pool) {
+            pool = await sql.connect(getConfig());
+        }
 
         const id = randomUUID();
 
@@ -49,10 +42,21 @@ module.exports = async function (context, req) {
         VALUES (@Id, @Name, @Email, @Message)
       `);
 
-        context.res = { status: 200, body: "Saved" };
+        context.res = {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+            body: { success: true }
+        };
 
     } catch (err) {
-        context.log(err);
-        context.res = { status: 500, body: "Server error: " + err.message };
+        // Log full error to Application Insights
+        context.log("Submit error:", err);
+
+        // Return safe message to client
+        context.res = {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+            body: { success: false, message: "Server error" }
+        };
     }
 };
