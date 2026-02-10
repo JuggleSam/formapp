@@ -1,13 +1,3 @@
-// TEMP: safe diagnostics (remove after fix)
-const missing = ["SQL_USER", "SQL_PASSWORD", "SQL_SERVER", "SQL_DATABASE"]
-    .filter((k) => !process.env[k] || !String(process.env[k]).trim());
-
-if (missing.length) {
-    context.res = { status: 500, body: "Missing app settings: " + missing.join(", ") };
-    return;
-}
-
-
 const sql = require("mssql");
 const { randomUUID } = require("crypto");
 
@@ -17,13 +7,23 @@ function getConfig() {
     return {
         user: process.env.SQL_USER,
         password: process.env.SQL_PASSWORD,
-        server: process.env.SQL_SERVER,      // e.g. myserver.database.windows.net
-        database: process.env.SQL_DATABASE,  // e.g. FormAppDb
+        server: process.env.SQL_SERVER,
+        database: process.env.SQL_DATABASE,
         options: { encrypt: true }
     };
 }
 
 module.exports = async function (context, req) {
+
+    // SAFE diagnostics (inside function!)
+    const missing = ["SQL_USER", "SQL_PASSWORD", "SQL_SERVER", "SQL_DATABASE"]
+        .filter(k => !process.env[k]);
+
+    if (missing.length) {
+        context.res = { status: 500, body: "Missing app settings: " + missing.join(", ") };
+        return;
+    }
+
     try {
         const body = req.body || {};
         const name = (body.name || "").trim();
@@ -49,13 +49,10 @@ module.exports = async function (context, req) {
         VALUES (@Id, @Name, @Email, @Message)
       `);
 
-        context.res = {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-            body: { id }
-        };
+        context.res = { status: 200, body: "Saved" };
+
     } catch (err) {
-        context.log("Submit error:", err);
-        context.res = { status: 500, body: "Server error." };
+        context.log(err);
+        context.res = { status: 500, body: "Server error: " + err.message };
     }
 };
