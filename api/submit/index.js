@@ -1,3 +1,13 @@
+// TEMP: safe diagnostics (remove after fix)
+const missing = ["SQL_USER", "SQL_PASSWORD", "SQL_SERVER", "SQL_DATABASE"]
+    .filter((k) => !process.env[k] || !String(process.env[k]).trim());
+
+if (missing.length) {
+    context.res = { status: 500, body: "Missing app settings: " + missing.join(", ") };
+    return;
+}
+
+
 const sql = require("mssql");
 const { randomUUID } = require("crypto");
 
