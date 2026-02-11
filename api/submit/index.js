@@ -14,6 +14,17 @@ function getConfig() {
 }
 
 module.exports = async function (context, req) {
+    // --- Link token protection ---
+    const expected = process.env.LINK_TOKEN;
+    const provided =
+        req.headers["x-link-token"] ||
+        (req.query ? req.query.t : undefined);
+
+    if (!expected || provided !== expected) {
+        context.res = { status: 401, body: "Unauthorized" };
+        return;
+    }
+
     try {
         const body = req.body || {};
         const name = (body.name || "").trim();

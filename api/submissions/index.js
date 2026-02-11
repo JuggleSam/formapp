@@ -19,6 +19,17 @@ function clampInt(value, def, min, max) {
 }
 
 module.exports = async function (context, req) {
+    // --- Link token protection ---
+    const expected = process.env.LINK_TOKEN;
+    const provided =
+        req.headers["x-link-token"] ||
+        (req.query ? req.query.t : undefined);
+
+    if (!expected || provided !== expected) {
+        context.res = { status: 401, body: "Unauthorized" };
+        return;
+    }
+
   try {
     const top = clampInt(req.query.top, 50, 1, 200);
     const skip = clampInt(req.query.skip, 0, 0, 1000000);
