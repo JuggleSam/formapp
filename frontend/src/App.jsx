@@ -1,6 +1,21 @@
 import { useEffect, useState } from "react";
 
+function getTokenFromUrlOrSession() {
+    const url = new URL(window.location.href);
+    const t = url.searchParams.get("t");
+
+    if (t) {
+        sessionStorage.setItem("linkToken", t);
+        url.searchParams.delete("t");
+        window.history.replaceState({}, "", url.toString());
+        return t;
+    }
+
+    return sessionStorage.getItem("linkToken") || "";
+}
+
 export default function App() {
+    const [token] = useState(() => getTokenFromUrlOrSession());
     const [form, setForm] = useState({ name: "", email: "", message: "" });
     const [status, setStatus] = useState("");
 
@@ -22,7 +37,10 @@ export default function App() {
         try {
             const res = await fetch("/api/submit", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Link-Token": token
+                },
                 body: JSON.stringify(form),
             });
 
@@ -43,7 +61,9 @@ export default function App() {
         setLoading(true);
         setLoadError("");
         try {
-            const res = await fetch(`/api/submissions?top=${newTop}&skip=${newSkip}`);
+            const res = await fetch(`/api/submissions?top=${newTop}&skip=${newSkip}`, {
+                headers: { "X-Link-Token": token }
+            });
             if (!res.ok) {
                 const text = await res.text().catch(() => "");
                 throw new Error(text || `HTTP ${res.status}`);
@@ -70,6 +90,17 @@ export default function App() {
 
     const canPrev = skip > 0;
     const canNext = skip + top < count;
+
+    if (!token) {
+        return (
+            <div style={{ maxWidth: 700, margin: "40px auto", fontFamily: "sans-serif" }}>
+                <h1>Access required</h1>
+                <p>This page requires a special link.</p>
+                <p>Open the link you were given.</p>
+            </div>
+        );
+    }
+
 
     return (
         <div style={{ maxWidth: 900, margin: "40px auto", fontFamily: "sans-serif" }}>
