@@ -81,12 +81,13 @@ export default function App() {
     }
 
     useEffect(() => {
+        if (!token) return;
+
         loadSubmissions(0, top);
-        // optional auto-refresh every 30s
         const t = setInterval(() => loadSubmissions(skip, top), 30000);
         return () => clearInterval(t);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [token]);
 
     const canPrev = skip > 0;
     const canNext = skip + top < count;
